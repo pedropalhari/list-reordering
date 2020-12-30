@@ -2,8 +2,9 @@ import { css, Global } from "@emotion/react";
 import styled from "@emotion/styled";
 import { DragHandlers, motion, useDragControls } from "framer-motion";
 import { useAtom } from "jotai";
-import { CSSProperties, useRef, useState } from "react";
-import StylesAtom from "./atoms";
+import React, { CSSProperties, useRef, useState } from "react";
+import { ComponentStylesAtom, MetadataAtom, StylesAtom } from "./atoms";
+import { Input } from "./components/Input";
 
 const MainContainer = styled.div`
   display: grid;
@@ -18,6 +19,11 @@ const LeftContainer = styled.div`
   width: 100%;
   background-color: #1e1d29;
   height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+
+  color: white;
 
   padding: 10px;
 `;
@@ -57,6 +63,10 @@ const RightContainerGrid = styled.div`
   }
 `;
 
+interface BlockProps {
+  selected: boolean;
+}
+
 const Block = styled(motion.div)`
   background-color: #00000011;
   border-radius: 5px;
@@ -65,7 +75,13 @@ const Block = styled(motion.div)`
 
   margin-top: 10px;
 
-  padding: 5px;
+  padding: 15px;
+
+  display: flex;
+  justify-content: center;
+
+  border: ${(props: BlockProps) =>
+    props.selected ? "solid 2px #f38f3d" : "none"};
 `;
 
 const OutsideBlock = styled(motion.div)`
@@ -119,33 +135,52 @@ export function DraggableReset({
 export default function App() {
   let [items, setItems] = useState<
     { type: string; id: number; subtype: string }[]
-  >([
-    { type: "BLOCK", subtype: "TEXT", id: 1 },
-    { type: "BLOCK", subtype: "TEXT", id: 2 },
-    { type: "BLOCK", subtype: "TEXT", id: 3 },
-    { type: "BLOCK", subtype: "TEXT", id: 4 },
-  ]);
+  >([]);
   let refs = useRef<({ ref: HTMLDivElement | null; id: number } | null)[]>(
     new Array(items.length).fill(null)
   );
   let [showDrop, setShowDrop] = useState(false);
 
   const [styles, setStyles] = useAtom(StylesAtom);
+  const [componentStyles, setComponentStyles] = useAtom(ComponentStylesAtom);
+  const [metadata, setMetadata] = useAtom(MetadataAtom);
 
   /**
    * -1 id is the body
    */
   const [selectedComponent, setSelectedComponent] = useState<number>(-1);
 
-  function setComponentStyle(id: number, style: CSSProperties) {
+  function setContainerStyle(id: number, style: CSSProperties) {
     setStyles((s) => ({
       ...s,
       [id]: {
-        ...s[1],
+        ...s[id],
         ...style,
       },
     }));
   }
+
+  function setComponentStyle(id: number, style: CSSProperties) {
+    setComponentStyles((s) => ({
+      ...s,
+      [id]: {
+        ...s[id],
+        ...style,
+      },
+    }));
+  }
+
+  function setComponentMetadata(id: number, metadata: any) {
+    setMetadata((s) => ({
+      ...s,
+      [id]: {
+        ...s[id],
+        ...metadata,
+      },
+    }));
+  }
+
+  console.log({ items });
 
   return (
     <MainContainer>
@@ -160,6 +195,18 @@ export default function App() {
             font-family: "Poppins";
             box-sizing: border-box;
           }
+
+          button,
+          input[type="submit"],
+          input[type="reset"] {
+            background: none;
+            color: inherit;
+            border: none;
+            padding: 0;
+            font: inherit;
+            cursor: pointer;
+            outline: inherit;
+          }
         `}
       />
 
@@ -167,11 +214,102 @@ export default function App() {
         <StyledText
           style={{ color: "white", fontSize: 16, fontWeight: "bold" }}
           onClick={() => {
-            setComponentStyle(-1, { backgroundColor: "red" });
+            setContainerStyle(11, { backgroundColor: "red" });
+            setComponentMetadata(11, { placeholder: "wow" });
           }}
         >
           Properties
         </StyledText>
+
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <StyledText
+            style={{ color: "white", fontSize: 16, fontWeight: "bold" }}
+            onClick={() => {
+              setContainerStyle(11, { backgroundColor: "red" });
+              setComponentMetadata(11, { placeholder: "wow" });
+            }}
+          >
+            Container
+          </StyledText>
+          {styles[selectedComponent] &&
+            Object.keys(styles[selectedComponent]).map((key) => {
+              let currentStyle = styles[selectedComponent];
+
+              return (
+                <>
+                  <span>{key}</span>
+                  <input
+                    style={{ width: "100%" }}
+                    value={(currentStyle as any)[key]}
+                    onChange={(evt) =>
+                      setContainerStyle(selectedComponent, {
+                        [key]: evt.target.value,
+                      })
+                    }
+                  />
+                </>
+              );
+            })}
+
+          <StyledText
+            style={{ color: "white", fontSize: 16, fontWeight: "bold" }}
+            onClick={() => {
+              setContainerStyle(11, { backgroundColor: "red" });
+              setComponentMetadata(11, { placeholder: "wow" });
+            }}
+          >
+            Component
+          </StyledText>
+
+          {metadata[selectedComponent] &&
+            Object.keys(metadata[selectedComponent]).map((key) => {
+              let currentMetadata = metadata[selectedComponent];
+
+              return (
+                <>
+                  <span>{key}</span>
+                  <input
+                    style={{ width: "100%" }}
+                    value={(currentMetadata as any)[key]}
+                    onChange={(evt) =>
+                      setComponentMetadata(selectedComponent, {
+                        [key]: evt.target.value,
+                      })
+                    }
+                  />
+                </>
+              );
+            })}
+
+          <StyledText
+            style={{ color: "white", fontSize: 16, fontWeight: "bold" }}
+            onClick={() => {
+              setContainerStyle(11, { backgroundColor: "red" });
+              setComponentMetadata(11, { placeholder: "wow" });
+            }}
+          >
+            Values
+          </StyledText>
+          {componentStyles[selectedComponent] &&
+            Object.keys(componentStyles[selectedComponent]).map((key) => {
+              let currentStyle = componentStyles[selectedComponent];
+
+              return (
+                <>
+                  <span>{key}</span>
+                  <input
+                    style={{ width: "100%" }}
+                    value={(currentStyle as any)[key]}
+                    onChange={(evt) =>
+                      setComponentStyle(selectedComponent, {
+                        [key]: evt.target.value,
+                      })
+                    }
+                  />
+                </>
+              );
+            })}
+        </div>
       </LeftContainer>
 
       <MiddleContainer style={styles[-1]}>
@@ -181,6 +319,11 @@ export default function App() {
           else if (type === "BLOCK")
             return (
               <Block
+                selected={selectedComponent === id}
+                onClick={() => {
+                  // Toggle between this selected and the body
+                  setSelectedComponent((sc) => (sc === id ? -1 : id));
+                }}
                 ref={(r) => refs.current.push({ ref: r, id })}
                 drag="y"
                 style={styles[id]}
@@ -244,7 +387,14 @@ export default function App() {
                 key={id}
               >
                 {subtype === "TEXT" && (
-                  <StyledText contentEditable>Default Text</StyledText>
+                  <StyledText style={componentStyles[id]}>
+                    {metadata[id]?.text}
+                  </StyledText>
+                )}
+
+                {subtype === "INPUT" && (
+                  // Explode the props
+                  <Input style={{ width: 200 }} {...metadata[id]} />
                 )}
               </Block>
             );
@@ -271,6 +421,9 @@ export default function App() {
               let currentCursorIndex = items.findIndex(
                 (i) => i.type === "CURSOR"
               );
+
+              const id = items.length * 2 + 1;
+
               setItems((c) => {
                 let arr = [...c];
 
@@ -278,10 +431,130 @@ export default function App() {
                   arr.splice(currentCursorIndex, 0, {
                     type: "BLOCK",
                     subtype: "TEXT",
-                    id: items.length * 2 + 1,
+                    id,
                   });
 
                 return arr.filter((i) => i.type != "CURSOR");
+              });
+
+              setContainerStyle(id, {
+                width: "720px",
+                padding: "15px",
+                margin: "10px",
+              });
+
+              setComponentStyle(id, {
+                width: "100%",
+                fontSize: 20,
+                textAlign: "center",
+                fontWeight: "normal",
+              });
+
+              setComponentMetadata(id, {
+                text: "Default Text",
+              });
+            }}
+            onDrag={(event, info) => {
+              let index = items.findIndex((i) => i.type === "CURSOR");
+
+              if (index === -1) return;
+
+              // Controller to show/hide drop, when the cursor is still inside the right panel
+              if (document.body.clientWidth - info.point.x > 200 && !showDrop)
+                setShowDrop(true);
+
+              if (document.body.clientWidth - info.point.x < 200 && showDrop)
+                setShowDrop(false);
+
+              // Move the drop around as a block
+              let currentY = info.point.y;
+
+              let bottomContainer = items[index + 1];
+              let upperContainer = items[index - 1];
+
+              if (bottomContainer) {
+                let bottomContainerRef = refs.current.find(
+                  (bcr) => bcr && bcr.id === bottomContainer.id
+                );
+
+                if (bottomContainerRef) {
+                  let top = bottomContainerRef.ref?.offsetTop as number;
+
+                  if (currentY > top) {
+                    let newItemArray = [...items];
+                    let aux: any;
+
+                    aux = newItemArray[index + 1];
+                    newItemArray[index + 1] = newItemArray[index];
+                    newItemArray[index] = aux;
+                    setItems(newItemArray);
+                    return;
+                  }
+                }
+              }
+
+              if (upperContainer) {
+                let upperContainerRef = refs.current.find(
+                  (bcr) => bcr && bcr.id === upperContainer.id
+                );
+
+                if (upperContainerRef) {
+                  let top = upperContainerRef.ref?.offsetTop as number;
+
+                  if (currentY < top) {
+                    let newItemArray = [...items];
+                    let aux: any;
+
+                    aux = newItemArray[index - 1];
+                    newItemArray[index - 1] = newItemArray[index];
+                    newItemArray[index] = aux;
+
+                    setItems(newItemArray);
+                    return;
+                  }
+                }
+              }
+            }}
+          />
+
+          {/* INPUT */}
+          <DraggableReset
+            onDragStart={() => {
+              setItems((c) => [
+                ...c,
+                { type: "CURSOR", subtype: "CURSOR", id: 9999 },
+              ]);
+            }}
+            onDragEnd={() => {
+              let currentCursorIndex = items.findIndex(
+                (i) => i.type === "CURSOR"
+              );
+
+              const id = items.length * 2 + 1;
+              setItems((c) => {
+                let arr = [...c];
+
+                if (showDrop)
+                  arr.splice(currentCursorIndex, 0, {
+                    type: "BLOCK",
+                    subtype: "INPUT",
+                    id,
+                  });
+
+                return arr.filter((i) => i.type != "CURSOR");
+              });
+
+              setContainerStyle(id, {
+                fontSize: 20,
+                textAlign: "center",
+                width: "720px",
+                padding: "15px",
+                margin: "10px",
+                fontWeight: "normal",
+              });
+
+              setComponentMetadata(id, {
+                placeholder: "Default text here",
               });
             }}
             onDrag={(event, info) => {

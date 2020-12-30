@@ -5,6 +5,16 @@ type StylesMap = {
   [uuid: string]: CSSProperties;
 };
 
-const StylesAtom = atom<StylesMap>({});
+type MetadataMap = {
+  [uuid: string]: any;
+};
 
-export default StylesAtom;
+export const StylesAtom = atom<StylesMap>({
+  "-1": {
+    backgroundColor: "white",
+  },
+});
+
+export const MetadataAtom = atom<MetadataMap>({});
+
+export const ComponentStylesAtom = atom<StylesMap>({});
