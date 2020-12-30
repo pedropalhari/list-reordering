@@ -1,7 +1,9 @@
 import { css, Global } from "@emotion/react";
 import styled from "@emotion/styled";
 import { DragHandlers, motion, useDragControls } from "framer-motion";
-import { useRef, useState } from "react";
+import { useAtom } from "jotai";
+import { CSSProperties, useRef, useState } from "react";
+import StylesAtom from "./atoms";
 
 const MainContainer = styled.div`
   display: grid;
@@ -14,8 +16,10 @@ const MainContainer = styled.div`
 
 const LeftContainer = styled.div`
   width: 100%;
-  background-color: red;
+  background-color: #1e1d29;
   height: 100vh;
+
+  padding: 10px;
 `;
 
 const MiddleContainer = styled.div`
@@ -31,20 +35,33 @@ const MiddleContainer = styled.div`
 
 const RightContainer = styled.div`
   width: 100%;
-  background-color: blue;
+  background-color: #1e1d29;
   height: 100vh;
+
+  padding: 10px;
+`;
+
+const RightContainerGrid = styled.div`
+  margin-top: 20px;
 
   display: grid;
   grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(10, 60px);
+
   column-gap: 10px;
-  padding: 5px;
+  row-gap: 30px;
+
+  & > * {
+    align-self: center;
+    justify-self: center;
+  }
 `;
 
 const Block = styled(motion.div)`
-  background-color: red;
+  background-color: #00000011;
   border-radius: 5px;
   width: 720px;
-  min-height: 100px;
+  min-height: 30px;
 
   margin-top: 10px;
 
@@ -52,7 +69,7 @@ const Block = styled(motion.div)`
 `;
 
 const OutsideBlock = styled(motion.div)`
-  background-color: green;
+  background-color: #2a2e3c;
   border-radius: 5px;
   width: 60px;
   height: 60px;
@@ -91,6 +108,7 @@ export function DraggableReset({
       layout
       drag
       whileDrag={{ opacity: 0.5 }}
+      whileHover={{ scale: 1.05 }}
       onDrag={onDrag}
       onDragStart={onDragStart}
       onDragEnd={(...args) => onDragEnd && onDragEnd(...args) && forceUpdate()}
@@ -112,19 +130,51 @@ export default function App() {
   );
   let [showDrop, setShowDrop] = useState(false);
 
+  const [styles, setStyles] = useAtom(StylesAtom);
+
+  /**
+   * -1 id is the body
+   */
+  const [selectedComponent, setSelectedComponent] = useState<number>(-1);
+
+  function setComponentStyle(id: number, style: CSSProperties) {
+    setStyles((s) => ({
+      ...s,
+      [id]: {
+        ...s[1],
+        ...style,
+      },
+    }));
+  }
+
   return (
     <MainContainer>
       <Global
         styles={css`
+          @import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
           body {
             margin: 0px;
+          }
+
+          * {
+            font-family: "Poppins";
+            box-sizing: border-box;
           }
         `}
       />
 
-      <LeftContainer></LeftContainer>
+      <LeftContainer>
+        <StyledText
+          style={{ color: "white", fontSize: 16, fontWeight: "bold" }}
+          onClick={() => {
+            setComponentStyle(-1, { backgroundColor: "red" });
+          }}
+        >
+          Properties
+        </StyledText>
+      </LeftContainer>
 
-      <MiddleContainer>
+      <MiddleContainer style={styles[-1]}>
         {items.map(({ type, id, subtype }, index) => {
           if (type === "CURSOR" && showDrop)
             return <DroppingBlock layout key={id} />;
@@ -133,6 +183,7 @@ export default function App() {
               <Block
                 ref={(r) => refs.current.push({ ref: r, id })}
                 drag="y"
+                style={styles[id]}
                 onDrag={(event, info) => {
                   let currentY = info.point.y;
 
@@ -201,269 +252,277 @@ export default function App() {
       </MiddleContainer>
 
       <RightContainer>
-        {/* TEXT */}
-        <DraggableReset
-          onDragStart={() => {
-            setItems((c) => [
-              ...c,
-              { type: "CURSOR", subtype: "CURSOR", id: 9999 },
-            ]);
-          }}
-          onDragEnd={() => {
-            let currentCursorIndex = items.findIndex(
-              (i) => i.type === "CURSOR"
-            );
-            setItems((c) => {
-              let arr = [...c];
+        <StyledText
+          style={{ color: "white", fontSize: 16, fontWeight: "bold" }}
+        >
+          Components
+        </StyledText>
 
-              if (showDrop)
-                arr.splice(currentCursorIndex, 0, {
-                  type: "BLOCK",
-                  subtype: "TEXT",
-                  id: items.length * 2 + 1,
-                });
-
-              return arr.filter((i) => i.type != "CURSOR");
-            });
-          }}
-          onDrag={(event, info) => {
-            let index = items.findIndex((i) => i.type === "CURSOR");
-
-            if (index === -1) return;
-
-            // Controller to show/hide drop, when the cursor is still inside the right panel
-            if (document.body.clientWidth - info.point.x > 200 && !showDrop)
-              setShowDrop(true);
-
-            if (document.body.clientWidth - info.point.x < 200 && showDrop)
-              setShowDrop(false);
-
-            // Move the drop around as a block
-            let currentY = info.point.y;
-
-            let bottomContainer = items[index + 1];
-            let upperContainer = items[index - 1];
-
-            if (bottomContainer) {
-              let bottomContainerRef = refs.current.find(
-                (bcr) => bcr && bcr.id === bottomContainer.id
+        <RightContainerGrid>
+          {/* TEXT */}
+          <DraggableReset
+            onDragStart={() => {
+              setItems((c) => [
+                ...c,
+                { type: "CURSOR", subtype: "CURSOR", id: 9999 },
+              ]);
+            }}
+            onDragEnd={() => {
+              let currentCursorIndex = items.findIndex(
+                (i) => i.type === "CURSOR"
               );
+              setItems((c) => {
+                let arr = [...c];
 
-              if (bottomContainerRef) {
-                let top = bottomContainerRef.ref?.offsetTop as number;
+                if (showDrop)
+                  arr.splice(currentCursorIndex, 0, {
+                    type: "BLOCK",
+                    subtype: "TEXT",
+                    id: items.length * 2 + 1,
+                  });
 
-                if (currentY > top) {
-                  let newItemArray = [...items];
-                  let aux: any;
+                return arr.filter((i) => i.type != "CURSOR");
+              });
+            }}
+            onDrag={(event, info) => {
+              let index = items.findIndex((i) => i.type === "CURSOR");
 
-                  aux = newItemArray[index + 1];
-                  newItemArray[index + 1] = newItemArray[index];
-                  newItemArray[index] = aux;
-                  setItems(newItemArray);
-                  return;
+              if (index === -1) return;
+
+              // Controller to show/hide drop, when the cursor is still inside the right panel
+              if (document.body.clientWidth - info.point.x > 200 && !showDrop)
+                setShowDrop(true);
+
+              if (document.body.clientWidth - info.point.x < 200 && showDrop)
+                setShowDrop(false);
+
+              // Move the drop around as a block
+              let currentY = info.point.y;
+
+              let bottomContainer = items[index + 1];
+              let upperContainer = items[index - 1];
+
+              if (bottomContainer) {
+                let bottomContainerRef = refs.current.find(
+                  (bcr) => bcr && bcr.id === bottomContainer.id
+                );
+
+                if (bottomContainerRef) {
+                  let top = bottomContainerRef.ref?.offsetTop as number;
+
+                  if (currentY > top) {
+                    let newItemArray = [...items];
+                    let aux: any;
+
+                    aux = newItemArray[index + 1];
+                    newItemArray[index + 1] = newItemArray[index];
+                    newItemArray[index] = aux;
+                    setItems(newItemArray);
+                    return;
+                  }
                 }
               }
-            }
 
-            if (upperContainer) {
-              let upperContainerRef = refs.current.find(
-                (bcr) => bcr && bcr.id === upperContainer.id
-              );
+              if (upperContainer) {
+                let upperContainerRef = refs.current.find(
+                  (bcr) => bcr && bcr.id === upperContainer.id
+                );
 
-              if (upperContainerRef) {
-                let top = upperContainerRef.ref?.offsetTop as number;
+                if (upperContainerRef) {
+                  let top = upperContainerRef.ref?.offsetTop as number;
 
-                if (currentY < top) {
-                  let newItemArray = [...items];
-                  let aux: any;
+                  if (currentY < top) {
+                    let newItemArray = [...items];
+                    let aux: any;
 
-                  aux = newItemArray[index - 1];
-                  newItemArray[index - 1] = newItemArray[index];
-                  newItemArray[index] = aux;
+                    aux = newItemArray[index - 1];
+                    newItemArray[index - 1] = newItemArray[index];
+                    newItemArray[index] = aux;
 
-                  setItems(newItemArray);
-                  return;
+                    setItems(newItemArray);
+                    return;
+                  }
                 }
               }
-            }
-          }}
-        />
+            }}
+          />
 
-        {/* INPUT CONTAINER */}
-        <DraggableReset
-          onDragStart={() => {
-            setItems((c) => [
-              ...c,
-              { type: "CURSOR", subtype: "CURSOR", id: 9999 },
-            ]);
-          }}
-          onDragEnd={() => {
-            let currentCursorIndex = items.findIndex(
-              (i) => i.type === "CURSOR"
-            );
-            setItems((c) => {
-              let arr = [...c];
-
-              if (showDrop)
-                arr.splice(currentCursorIndex, 0, {
-                  type: "BLOCK",
-                  subtype: "INPUT_CONTAINER",
-                  id: items.length * 2 + 1,
-                });
-
-              return arr.filter((i) => i.type != "CURSOR");
-            });
-          }}
-          onDrag={(event, info) => {
-            let index = items.findIndex((i) => i.type === "CURSOR");
-
-            if (index === -1) return;
-
-            // Controller to show/hide drop, when the cursor is still inside the right panel
-            if (document.body.clientWidth - info.point.x > 200 && !showDrop)
-              setShowDrop(true);
-
-            if (document.body.clientWidth - info.point.x < 200 && showDrop)
-              setShowDrop(false);
-
-            // Move the drop around as a block
-            let currentY = info.point.y;
-
-            let bottomContainer = items[index + 1];
-            let upperContainer = items[index - 1];
-
-            if (bottomContainer) {
-              let bottomContainerRef = refs.current.find(
-                (bcr) => bcr && bcr.id === bottomContainer.id
+          {/* INPUT CONTAINER */}
+          <DraggableReset
+            onDragStart={() => {
+              setItems((c) => [
+                ...c,
+                { type: "CURSOR", subtype: "CURSOR", id: 9999 },
+              ]);
+            }}
+            onDragEnd={() => {
+              let currentCursorIndex = items.findIndex(
+                (i) => i.type === "CURSOR"
               );
+              setItems((c) => {
+                let arr = [...c];
 
-              if (bottomContainerRef) {
-                let top = bottomContainerRef.ref?.offsetTop as number;
+                if (showDrop)
+                  arr.splice(currentCursorIndex, 0, {
+                    type: "BLOCK",
+                    subtype: "INPUT_CONTAINER",
+                    id: items.length * 2 + 1,
+                  });
 
-                if (currentY > top) {
-                  let newItemArray = [...items];
-                  let aux: any;
+                return arr.filter((i) => i.type != "CURSOR");
+              });
+            }}
+            onDrag={(event, info) => {
+              let index = items.findIndex((i) => i.type === "CURSOR");
 
-                  aux = newItemArray[index + 1];
-                  newItemArray[index + 1] = newItemArray[index];
-                  newItemArray[index] = aux;
-                  setItems(newItemArray);
-                  return;
+              if (index === -1) return;
+
+              // Controller to show/hide drop, when the cursor is still inside the right panel
+              if (document.body.clientWidth - info.point.x > 200 && !showDrop)
+                setShowDrop(true);
+
+              if (document.body.clientWidth - info.point.x < 200 && showDrop)
+                setShowDrop(false);
+
+              // Move the drop around as a block
+              let currentY = info.point.y;
+
+              let bottomContainer = items[index + 1];
+              let upperContainer = items[index - 1];
+
+              if (bottomContainer) {
+                let bottomContainerRef = refs.current.find(
+                  (bcr) => bcr && bcr.id === bottomContainer.id
+                );
+
+                if (bottomContainerRef) {
+                  let top = bottomContainerRef.ref?.offsetTop as number;
+
+                  if (currentY > top) {
+                    let newItemArray = [...items];
+                    let aux: any;
+
+                    aux = newItemArray[index + 1];
+                    newItemArray[index + 1] = newItemArray[index];
+                    newItemArray[index] = aux;
+                    setItems(newItemArray);
+                    return;
+                  }
                 }
               }
-            }
 
-            if (upperContainer) {
-              let upperContainerRef = refs.current.find(
-                (bcr) => bcr && bcr.id === upperContainer.id
-              );
+              if (upperContainer) {
+                let upperContainerRef = refs.current.find(
+                  (bcr) => bcr && bcr.id === upperContainer.id
+                );
 
-              if (upperContainerRef) {
-                let top = upperContainerRef.ref?.offsetTop as number;
+                if (upperContainerRef) {
+                  let top = upperContainerRef.ref?.offsetTop as number;
 
-                if (currentY < top) {
-                  let newItemArray = [...items];
-                  let aux: any;
+                  if (currentY < top) {
+                    let newItemArray = [...items];
+                    let aux: any;
 
-                  aux = newItemArray[index - 1];
-                  newItemArray[index - 1] = newItemArray[index];
-                  newItemArray[index] = aux;
+                    aux = newItemArray[index - 1];
+                    newItemArray[index - 1] = newItemArray[index];
+                    newItemArray[index] = aux;
 
-                  setItems(newItemArray);
-                  return;
+                    setItems(newItemArray);
+                    return;
+                  }
                 }
               }
-            }
-          }}
-        />
+            }}
+          />
 
-        {/* CHECKBOX */}
-        <DraggableReset
-          onDragStart={() => {
-            setItems((c) => [
-              ...c,
-              { type: "CURSOR", subtype: "CURSOR", id: 9999 },
-            ]);
-          }}
-          onDragEnd={() => {
-            let currentCursorIndex = items.findIndex(
-              (i) => i.type === "CURSOR"
-            );
-            setItems((c) => {
-              let arr = [...c];
-
-              if (showDrop)
-                arr.splice(currentCursorIndex, 0, {
-                  type: "BLOCK",
-                  subtype: "CHECKBOX",
-                  id: items.length * 2 + 1,
-                });
-
-              return arr.filter((i) => i.type != "CURSOR");
-            });
-          }}
-          onDrag={(event, info) => {
-            let index = items.findIndex((i) => i.type === "CURSOR");
-
-            if (index === -1) return;
-
-            // Controller to show/hide drop, when the cursor is still inside the right panel
-            if (document.body.clientWidth - info.point.x > 200 && !showDrop)
-              setShowDrop(true);
-
-            if (document.body.clientWidth - info.point.x < 200 && showDrop)
-              setShowDrop(false);
-
-            // Move the drop around as a block
-            let currentY = info.point.y;
-
-            let bottomContainer = items[index + 1];
-            let upperContainer = items[index - 1];
-
-            if (bottomContainer) {
-              let bottomContainerRef = refs.current.find(
-                (bcr) => bcr && bcr.id === bottomContainer.id
+          {/* CHECKBOX */}
+          <DraggableReset
+            onDragStart={() => {
+              setItems((c) => [
+                ...c,
+                { type: "CURSOR", subtype: "CURSOR", id: 9999 },
+              ]);
+            }}
+            onDragEnd={() => {
+              let currentCursorIndex = items.findIndex(
+                (i) => i.type === "CURSOR"
               );
+              setItems((c) => {
+                let arr = [...c];
 
-              if (bottomContainerRef) {
-                let top = bottomContainerRef.ref?.offsetTop as number;
+                if (showDrop)
+                  arr.splice(currentCursorIndex, 0, {
+                    type: "BLOCK",
+                    subtype: "CHECKBOX",
+                    id: items.length * 2 + 1,
+                  });
 
-                if (currentY > top) {
-                  let newItemArray = [...items];
-                  let aux: any;
+                return arr.filter((i) => i.type != "CURSOR");
+              });
+            }}
+            onDrag={(event, info) => {
+              let index = items.findIndex((i) => i.type === "CURSOR");
 
-                  aux = newItemArray[index + 1];
-                  newItemArray[index + 1] = newItemArray[index];
-                  newItemArray[index] = aux;
-                  setItems(newItemArray);
-                  return;
+              if (index === -1) return;
+
+              // Controller to show/hide drop, when the cursor is still inside the right panel
+              if (document.body.clientWidth - info.point.x > 200 && !showDrop)
+                setShowDrop(true);
+
+              if (document.body.clientWidth - info.point.x < 200 && showDrop)
+                setShowDrop(false);
+
+              // Move the drop around as a block
+              let currentY = info.point.y;
+
+              let bottomContainer = items[index + 1];
+              let upperContainer = items[index - 1];
+
+              if (bottomContainer) {
+                let bottomContainerRef = refs.current.find(
+                  (bcr) => bcr && bcr.id === bottomContainer.id
+                );
+
+                if (bottomContainerRef) {
+                  let top = bottomContainerRef.ref?.offsetTop as number;
+
+                  if (currentY > top) {
+                    let newItemArray = [...items];
+                    let aux: any;
+
+                    aux = newItemArray[index + 1];
+                    newItemArray[index + 1] = newItemArray[index];
+                    newItemArray[index] = aux;
+                    setItems(newItemArray);
+                    return;
+                  }
                 }
               }
-            }
 
-            if (upperContainer) {
-              let upperContainerRef = refs.current.find(
-                (bcr) => bcr && bcr.id === upperContainer.id
-              );
+              if (upperContainer) {
+                let upperContainerRef = refs.current.find(
+                  (bcr) => bcr && bcr.id === upperContainer.id
+                );
 
-              if (upperContainerRef) {
-                let top = upperContainerRef.ref?.offsetTop as number;
+                if (upperContainerRef) {
+                  let top = upperContainerRef.ref?.offsetTop as number;
 
-                if (currentY < top) {
-                  let newItemArray = [...items];
-                  let aux: any;
+                  if (currentY < top) {
+                    let newItemArray = [...items];
+                    let aux: any;
 
-                  aux = newItemArray[index - 1];
-                  newItemArray[index - 1] = newItemArray[index];
-                  newItemArray[index] = aux;
+                    aux = newItemArray[index - 1];
+                    newItemArray[index - 1] = newItemArray[index];
+                    newItemArray[index] = aux;
 
-                  setItems(newItemArray);
-                  return;
+                    setItems(newItemArray);
+                    return;
+                  }
                 }
               }
-            }
-          }}
-        />
+            }}
+          />
+        </RightContainerGrid>
       </RightContainer>
     </MainContainer>
   );
